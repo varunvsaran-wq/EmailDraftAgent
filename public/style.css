@@ -13,6 +13,7 @@
   --text-main:  #E8E4DC;
   --text-muted: #8A8480;
   --error:      #E07070;
+  --success:    #6DBF8A;
   --radius:     6px;
   --transition: 0.18s ease;
 }
@@ -41,6 +42,8 @@ header {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .header-inner {
@@ -80,6 +83,214 @@ header {
   letter-spacing: 0.06em;
   font-family: system-ui, sans-serif;
   margin-top: 1px;
+}
+
+/* ─── Header Auth ────────────────────────────────────── */
+.header-auth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: system-ui, sans-serif;
+}
+
+.auth-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--gold-dim);
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.auth-name {
+  font-size: 13px;
+  color: var(--text-main);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--dark-3);
+  border: 1px solid var(--dark-4);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.inbox-btn:hover { border-color: var(--gold-dim); background: var(--dark-4); }
+
+.signin-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.signin-btn:hover { background: rgba(201, 168, 76, 0.08); border-color: var(--gold); }
+
+.signout-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--dark-4);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+  text-decoration: none;
+}
+
+.signout-btn:hover { color: var(--text-main); border-color: var(--mid); }
+
+/* ─── Inbox Drawer ───────────────────────────────────── */
+.inbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 40;
+}
+
+.inbox-drawer {
+  position: fixed;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  background: var(--dark-2);
+  border-left: 1px solid var(--dark-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.22s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.inbox-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--dark-4);
+  flex-shrink: 0;
+}
+
+.inbox-drawer-title {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color var(--transition);
+}
+
+.icon-btn:hover { color: var(--text-main); }
+
+.inbox-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.inbox-loading {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.inbox-item {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--dark-3);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.inbox-item:hover { background: var(--dark-3); }
+.inbox-item.unread .inbox-item-subject { font-weight: 700; color: var(--white); }
+
+.inbox-item-from {
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--gold-dim);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-item-subject {
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-item-preview {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-item-date {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  color: var(--mid);
+  margin-top: 4px;
 }
 
 /* ─── Main Layout ────────────────────────────────────── */
@@ -142,11 +353,7 @@ main {
   gap: 8px;
 }
 
-.type-card {
-  cursor: pointer;
-  display: block;
-}
-
+.type-card { cursor: pointer; display: block; }
 .type-card input[type="radio"] { display: none; }
 
 .type-card-inner {
@@ -161,9 +368,7 @@ main {
   transition: border-color var(--transition), background var(--transition);
 }
 
-.type-card:hover .type-card-inner {
-  border-color: var(--gold-dim);
-}
+.type-card:hover .type-card-inner { border-color: var(--gold-dim); }
 
 .type-card input:checked + .type-card-inner {
   border-color: var(--gold);
@@ -181,9 +386,7 @@ main {
   line-height: 1;
 }
 
-.type-card input:checked + .type-card-inner .type-number {
-  color: var(--gold);
-}
+.type-card input:checked + .type-card-inner .type-number { color: var(--gold); }
 
 .type-name {
   font-size: 13px;
@@ -209,12 +412,7 @@ main {
   overflow: hidden;
 }
 
-.tone-option {
-  flex: 1;
-  cursor: pointer;
-  text-align: center;
-}
-
+.tone-option { flex: 1; cursor: pointer; text-align: center; }
 .tone-option input[type="radio"] { display: none; }
 
 .tone-option span {
@@ -229,7 +427,6 @@ main {
 }
 
 .tone-option:last-child span { border-right: none; }
-
 .tone-option:hover span { color: var(--text-main); }
 
 .tone-option input:checked + span {
@@ -289,6 +486,50 @@ main {
   cursor: not-allowed;
 }
 
+/* ─── Outlook Fields ─────────────────────────────────── */
+.outlook-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--dark-3);
+  border: 1px solid var(--dark-4);
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.outlook-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.outlook-label {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.outlook-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--dark-4);
+  color: var(--text-main);
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  padding: 4px 0;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.outlook-input::placeholder { color: var(--mid); }
+.outlook-input:focus { border-bottom-color: var(--gold-dim); }
+
 /* ─── Draft Panel ────────────────────────────────────── */
 .draft-header {
   display: flex;
@@ -313,10 +554,7 @@ main {
   transition: border-color var(--transition), color var(--transition);
 }
 
-.action-btn:hover {
-  border-color: var(--gold-dim);
-  color: var(--gold-light);
-}
+.action-btn:hover { border-color: var(--gold-dim); color: var(--gold-light); }
 
 /* ─── Empty / Error States ───────────────────────────── */
 .empty-state {
@@ -331,10 +569,7 @@ main {
   padding: 32px;
 }
 
-.empty-icon {
-  font-size: 36px;
-  opacity: 0.3;
-}
+.empty-icon { font-size: 36px; opacity: 0.3; }
 
 .empty-state p {
   font-size: 13px;
@@ -394,6 +629,75 @@ main {
 
 .meta-sep { opacity: 0.4; }
 
+/* ─── Outlook Action Buttons ─────────────────────────── */
+.outlook-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.outlook-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.outlook-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.outlook-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--dark-4);
+  color: var(--text-muted);
+}
+
+.outlook-btn-secondary:hover:not(:disabled) {
+  border-color: var(--gold-dim);
+  color: var(--gold-light);
+}
+
+.outlook-btn-primary {
+  background: var(--gold);
+  border: 1px solid var(--gold);
+  color: var(--dark);
+}
+
+.outlook-btn-primary:hover:not(:disabled) { background: var(--gold-light); border-color: var(--gold-light); }
+
+/* ─── Outlook Status ─────────────────────────────────── */
+.outlook-status {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.outlook-status.success {
+  background: rgba(109, 191, 138, 0.1);
+  border: 1px solid rgba(109, 191, 138, 0.25);
+  color: var(--success);
+}
+
+.outlook-status.error {
+  background: rgba(224, 112, 112, 0.08);
+  border: 1px solid rgba(224, 112, 112, 0.2);
+  color: var(--error);
+}
+
 /* ─── Spinner ────────────────────────────────────────── */
 .spinner {
   width: 16px;
@@ -410,11 +714,16 @@ main {
 /* ─── Utility ────────────────────────────────────────── */
 .hidden { display: none !important; }
 
+/* ─── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--dark-2); }
+::-webkit-scrollbar-thumb { background: var(--dark-4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mid); }
+
 /* ─── Responsive ─────────────────────────────────────── */
 @media (max-width: 860px) {
-  .panel-grid {
-    grid-template-columns: 1fr;
-  }
+  .panel-grid { grid-template-columns: 1fr; }
   main { padding: 16px; }
   header { padding: 0 16px; }
+  .inbox-drawer { width: 100%; }
 }

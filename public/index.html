@@ -16,13 +16,28 @@
           <div class="firm-tagline">AI Email Drafting Agent</div>
         </div>
       </div>
+      <div class="header-auth" id="headerAuth">
+        <!-- populated by JS -->
+      </div>
     </div>
   </header>
+
+  <!-- ── Inbox Drawer ────────────────────────────────── -->
+  <div id="inboxOverlay" class="inbox-overlay hidden"></div>
+  <aside id="inboxDrawer" class="inbox-drawer hidden">
+    <div class="inbox-drawer-header">
+      <span class="inbox-drawer-title">Inbox</span>
+      <button id="closeInbox" class="icon-btn" title="Close">&#10005;</button>
+    </div>
+    <div id="inboxList" class="inbox-list">
+      <div class="inbox-loading">Loading emails&hellip;</div>
+    </div>
+  </aside>
 
   <main>
     <div class="panel-grid">
 
-      <!-- LEFT PANEL: Input -->
+      <!-- LEFT PANEL: Compose -->
       <section class="panel panel-left">
         <h2 class="panel-title">Compose</h2>
 
@@ -97,19 +112,31 @@ For post-meeting: paste the email thread or summarize what was discussed."
         </button>
       </section>
 
-      <!-- RIGHT PANEL: Output -->
+      <!-- RIGHT PANEL: Draft -->
       <section class="panel panel-right">
         <div class="draft-header">
           <h2 class="panel-title">Draft</h2>
           <div class="draft-actions">
             <button id="copyBtn" class="action-btn hidden" title="Copy to clipboard">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               Copy
             </button>
             <button id="clearBtn" class="action-btn hidden" title="Clear draft">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
               Clear
             </button>
+          </div>
+        </div>
+
+        <!-- Outlook send fields (shown when authenticated) -->
+        <div id="outlookFields" class="outlook-fields hidden">
+          <div class="outlook-field-row">
+            <label class="outlook-label">To</label>
+            <input id="sendTo" type="email" class="outlook-input" placeholder="recipient@example.com" />
+          </div>
+          <div class="outlook-field-row">
+            <label class="outlook-label">Subject</label>
+            <input id="sendSubject" type="text" class="outlook-input" placeholder="Email subject" />
           </div>
         </div>
 
@@ -136,6 +163,20 @@ For post-meeting: paste the email thread or summarize what was discussed."
           <span class="meta-sep">·</span>
           <span id="draftToneLabel"></span>
         </div>
+
+        <!-- Outlook send/save buttons (shown when authenticated + draft ready) -->
+        <div id="outlookActions" class="outlook-actions hidden">
+          <button id="saveDraftBtn" class="outlook-btn outlook-btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save to Outlook Drafts
+          </button>
+          <button id="sendBtn" class="outlook-btn outlook-btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Send via Outlook
+          </button>
+        </div>
+
+        <div id="outlookStatus" class="outlook-status hidden"></div>
       </section>
 
     </div>

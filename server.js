@@ -1,14 +1,23 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const session = require("express-session");
 const Anthropic = require("@anthropic-ai/sdk");
+const msal = require("@azure/msal-node");
 const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || "ifg-email-agent-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 8 * 60 * 60 * 1000 },
+}));
 app.use(express.static(path.join(__dirname, "public")));
 
+// ─── Anthropic ────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const ADVISOR_NAME = "John Smith";
@@ -53,27 +62,210 @@ You just finished a call or meeting with a Referral Advocate or prospective clie
 };
 
 const TONE_INSTRUCTIONS = {
-  formal:
-    "Write in a polished, formal tone — professional and precise. Avoid contractions and casual language.",
+  formal: "Write in a polished, formal tone — professional and precise. Avoid contractions and casual language.",
   warm: "Write in a warm, conversational tone — friendly and approachable while remaining professional. Contractions are fine.",
-  concise:
-    "Write as concisely as possible — every sentence must earn its place. No filler phrases, no pleasantries beyond what's necessary.",
+  concise: "Write as concisely as possible — every sentence must earn its place. No filler phrases, no pleasantries beyond what's necessary.",
 };
 
+// ─── MSAL / Outlook Auth ──────────────────────────────
+const REDIRECT_URI = `http://localhost:${process.env.PORT || 4000}/auth/callback`;
+const GRAPH_SCOPES = [
+  "https://graph.microsoft.com/Mail.Read",
+  "https://graph.microsoft.com/Mail.Send",
+  "https://graph.microsoft.com/Mail.ReadWrite",
+  "https://graph.microsoft.com/User.Read",
+];
+
+const pca = new msal.ConfidentialClientApplication({
+  auth: {
+    clientId: process.env.AZURE_CLIENT_ID,
+    authority: "https://login.microsoftonline.com/common",
+    clientSecret: process.env.AZURE_CLIENT_SECRET,
+  },
+});
+
+app.get("/auth/login", async (req, res) => {
+  try {
+    const url = await pca.getAuthCodeUrl({ scopes: GRAPH_SCOPES, redirectUri: REDIRECT_URI, prompt: "select_account" });
+    res.redirect(url);
+  } catch (err) {
+    console.error("Auth login error:", err.message);
+    res.redirect("/?auth_error=1");
+  }
+});
+
+app.get("/auth/callback", async (req, res) => {
+  const { code, error } = req.query;
+  if (error) {
+    console.error("Auth error from Microsoft:", error, req.query.error_description);
+    return res.redirect("/?auth_error=1");
+  }
+  try {
+    const result = await pca.acquireTokenByCode({
+      code,
+      scopes: GRAPH_SCOPES,
+      redirectUri: REDIRECT_URI,
+    });
+    req.session.accessToken = result.accessToken;
+    req.session.user = { name: result.account.name, email: result.account.username };
+    res.redirect("/");
+  } catch (err) {
+    console.error("Auth callback error:", err.message);
+    res.redirect("/?auth_error=1");
+  }
+});
+
+app.get("/auth/logout", (req, res) => {
+  req.session.destroy(() => res.redirect("/"));
+});
+
+// ─── Middleware ───────────────────────────────────────
+function requireAuth(req, res, next) {
+  if (!req.session.accessToken) return res.status(401).json({ error: "Not authenticated" });
+  next();
+}
+
+// ─── Graph API helpers ────────────────────────────────
+async function graphGet(token, endpoint) {
+  const r = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    console.error(`Graph ${r.status} on ${endpoint}:`, JSON.stringify(e.error || e));
+    throw new Error(e.error?.message || `Graph error ${r.status}`);
+  }
+  return r.json();
+}
+
+async function graphPost(token, endpoint, body) {
+  const r = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    console.error(`Graph POST ${r.status} on ${endpoint}:`, JSON.stringify(e.error || e));
+    throw new Error(e.error?.message || `Graph error ${r.status}`);
+  }
+  if (r.status === 204) return { success: true };
+  const text = await r.text();
+  return text ? JSON.parse(text) : { success: true };
+}
+
+// ─── Auth status ──────────────────────────────────────
+app.get("/api/me", (req, res) => {
+  if (!req.session.accessToken) return res.json({ authenticated: false });
+  res.json({ authenticated: true, user: req.session.user });
+});
+
+// ─── Token debug (remove after troubleshooting) ───────
+app.get("/api/debug-token", (req, res) => {
+  if (!req.session.accessToken) return res.json({ error: "No token in session" });
+  try {
+    const parts = req.session.accessToken.split(".");
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    res.json({
+      aud: payload.aud,
+      scp: payload.scp,
+      roles: payload.roles,
+      upn: payload.upn || payload.preferred_username,
+      exp: new Date(payload.exp * 1000).toISOString(),
+    });
+  } catch {
+    res.json({ error: "Could not decode token", token_prefix: req.session.accessToken.slice(0, 30) });
+  }
+});
+
+// ─── Folder check (debug) ─────────────────────────────
+app.get("/api/check-folders", requireAuth, async (req, res) => {
+  try {
+    const [drafts, sent] = await Promise.all([
+      graphGet(req.session.accessToken, "/me/mailFolders/drafts/messages?$top=3&$select=id,subject,createdDateTime&$orderby=createdDateTime desc"),
+      graphGet(req.session.accessToken, "/me/mailFolders/sentitems/messages?$top=3&$select=id,subject,sentDateTime&$orderby=sentDateTime desc"),
+    ]);
+    res.json({
+      drafts: drafts.value.map(m => ({ id: m.id, subject: m.subject, created: m.createdDateTime })),
+      sent:   sent.value.map(m => ({ id: m.id, subject: m.subject, sent: m.sentDateTime })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Inbox ────────────────────────────────────────────
+app.get("/api/emails", requireAuth, async (req, res) => {
+  try {
+    const data = await graphGet(
+      req.session.accessToken,
+      "/me/mailFolders/inbox/messages?$top=25&$select=id,subject,from,receivedDateTime,bodyPreview,isRead&$orderby=receivedDateTime desc"
+    );
+    res.json(data.value);
+  } catch (err) {
+    console.error("Inbox error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/emails/:id", requireAuth, async (req, res) => {
+  try {
+    const data = await graphGet(
+      req.session.accessToken,
+      `/me/messages/${req.params.id}?$select=id,subject,from,body,receivedDateTime,toRecipients`
+    );
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Send email ───────────────────────────────────────
+app.post("/api/send", requireAuth, async (req, res) => {
+  const { to, subject, body } = req.body;
+  if (!to || !subject || !body) return res.status(400).json({ error: "Missing to, subject, or body." });
+  try {
+    await graphPost(req.session.accessToken, "/me/sendMail", {
+      message: {
+        subject,
+        body: { contentType: "Text", content: body },
+        toRecipients: [{ emailAddress: { address: to } }],
+      },
+      saveToSentItems: true,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Send error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Save as Outlook draft ────────────────────────────
+app.post("/api/save-draft", requireAuth, async (req, res) => {
+  const { to, subject, body } = req.body;
+  if (!subject || !body) return res.status(400).json({ error: "Missing subject or body." });
+  try {
+    const draft = await graphPost(req.session.accessToken, "/me/mailFolders/drafts/messages", {
+      subject,
+      body: { contentType: "Text", content: body },
+      ...(to && { toRecipients: [{ emailAddress: { address: to } }] }),
+    });
+    res.json({ success: true, id: draft.id });
+  } catch (err) {
+    console.error("Save draft error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── AI Draft ─────────────────────────────────────────
 app.post("/api/draft", async (req, res) => {
   const { emailContent, emailType, tone } = req.body;
-
-  if (!emailContent || !emailType || !tone) {
-    return res.status(400).json({ error: "Missing required fields." });
-  }
+  if (!emailContent || !emailType || !tone) return res.status(400).json({ error: "Missing required fields." });
 
   const typeConfig = EMAIL_TYPE_PROMPTS[emailType];
-  if (!typeConfig) {
-    return res.status(400).json({ error: "Invalid email type." });
-  }
+  if (!typeConfig) return res.status(400).json({ error: "Invalid email type." });
 
   const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.warm;
-
   const userPrompt = `Here is the email or context I need to reply to:
 
 ---
@@ -91,16 +283,20 @@ Write the reply email now. Output only the email body — no subject line, no me
       system: typeConfig.system,
       messages: [{ role: "user", content: userPrompt }],
     });
-
-    const draft = message.content[0].text.trim();
-    res.json({ draft });
+    res.json({ draft: message.content[0].text.trim() });
   } catch (err) {
-    console.error("Anthropic API error:", err.message);
+    console.error("Anthropic error:", err.message);
     res.status(500).json({ error: "Failed to generate draft. Check your API key and try again." });
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Email Draft Agent running at http://localhost:${PORT}`);
+const PORT = process.env.PORT || 4000;
+const server = app.listen(PORT, () => console.log(`Email Draft Agent running at http://localhost:${PORT}`));
+server.on("error", err => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`\nPort ${PORT} is already in use. Kill the existing process and try again.\nRun: netstat -ano | findstr :${PORT}\n`);
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
 });
