@@ -5,7 +5,7 @@
 
 ## Overview
 
-An AI-powered web tool that reads email context and generates professional, ready-to-send reply drafts for three core M&A advisory email scenarios. Built for speed — paste an email, pick a type and tone, get a polished draft in seconds.
+An AI-powered web tool that reads email context and generates professional, ready-to-send reply drafts for three core M&A advisory email scenarios. Built for speed — paste an email or load one directly from Outlook, pick a type and tone, get a polished draft in seconds, then send or save it back to Outlook without leaving the tool.
 
 ---
 
@@ -13,16 +13,20 @@ An AI-powered web tool that reads email context and generates professional, read
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Backend** | Node.js + Express | HTTP server, API routing |
+| **Backend** | Node.js + Express | HTTP server, API routing, session management |
 | **AI Model** | Anthropic Claude Haiku (`claude-haiku-4-5`) | Email draft generation |
 | **AI SDK** | `@anthropic-ai/sdk` v0.39 | Anthropic API client |
-| **Frontend** | Vanilla HTML / CSS / JavaScript | UI — no framework overhead |
+| **Outlook Auth** | `@azure/msal-node` | Microsoft OAuth 2.0 (authorization code flow) |
+| **Outlook API** | Microsoft Graph API | Read inbox, send email, save drafts |
+| **Sessions** | `express-session` | Secure server-side token storage |
+| **Frontend** | Vanilla HTML / CSS / JavaScript | UI — no framework, no build step |
 | **Config** | `dotenv` | Secure API key management |
 | **Dev** | `nodemon` | Auto-restart on file changes |
 
 **Why this stack?**
 - Node + Express keeps the server minimal and fast to set up
 - Claude Haiku is optimized for speed and cost on short-form generation tasks
+- MSAL Node is Microsoft's official library for OAuth — reliable and well-maintained
 - Vanilla JS frontend means zero build step — open a browser and it works
 
 ---
@@ -32,16 +36,13 @@ An AI-powered web tool that reads email context and generates professional, read
 ### Prerequisites
 - [Node.js](https://nodejs.org/) v18 or higher
 - An [Anthropic API key](https://console.anthropic.com/)
+- A Microsoft Azure App Registration (for Outlook integration — optional, see below)
 
 ### 1. Clone or download the project
 
 ```bash
-# If cloning from git
 git clone <repo-url>
 cd EmailDraftAgent
-
-# Or just navigate into the folder
-cd path/to/EmailDraftAgent
 ```
 
 ### 2. Install dependencies
@@ -50,20 +51,25 @@ cd path/to/EmailDraftAgent
 npm install
 ```
 
-### 3. Configure your API key
+### 3. Configure environment variables
 
-Copy the example env file and add your key:
+Copy the example env file:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace the placeholder:
+Open `.env` and fill in your values:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...your-key-here...
-PORT=3001
+AZURE_CLIENT_ID=your-azure-client-id
+AZURE_TENANT_ID=your-azure-tenant-id
+AZURE_CLIENT_SECRET=your-azure-client-secret
+PORT=4000
 ```
+
+> The Anthropic API key is required. The Azure credentials are only needed for the Outlook integration — the AI drafting works without them.
 
 ### 4. Start the server
 
@@ -71,7 +77,7 @@ PORT=3001
 npm start
 ```
 
-The app will be available at **http://localhost:3001**
+The app will be available at **http://localhost:4000**
 
 For development with auto-reload:
 ```bash
@@ -80,14 +86,40 @@ npm run dev
 
 ---
 
+## Azure App Registration (Outlook Integration)
+
+To enable sign-in with Outlook, inbox access, and sending/saving drafts:
+
+1. Go to [portal.azure.com](https://portal.azure.com) → **Azure Active Directory** → **App Registrations** → **New Registration**
+2. Set **Supported account types** to: *Accounts in any organizational directory and personal Microsoft accounts*
+3. Add a **Redirect URI**: Platform = **Web**, URI = `http://localhost:4000/auth/callback`
+4. Note your **Application (client) ID** and **Directory (tenant) ID** from the Overview page
+5. Under **Certificates & Secrets** → create a new client secret → copy the **Value**
+6. Under **API Permissions** → **Add a permission** → **Microsoft Graph** → **Delegated**:
+   - `Mail.Read`
+   - `Mail.Send`
+   - `Mail.ReadWrite`
+   - `User.Read`
+7. Click **Grant admin consent**
+
+---
+
 ## Using the Tool
 
+### Without Outlook (manual mode)
 1. **Select an email type** — choose one of the three cards on the left
 2. **Pick a tone** — Warm, Formal, or Concise
-3. **Paste your email** — drop in the incoming message, or describe the context for follow-ups
+3. **Paste the incoming email** into the text area
 4. **Click Generate Draft** (or press `Ctrl+Enter`)
-5. **Review and edit** the draft on the right — it's a live editable text area
-6. **Copy** to clipboard when ready to paste into Outlook
+5. **Review and edit** the draft inline on the right
+6. **Copy** to clipboard and paste into your email client
+
+### With Outlook connected
+1. Click **Sign in with Outlook** in the top right
+2. Click **Inbox** to open your inbox drawer — click any email to load it into the compose area
+3. Select email type and tone, then **Generate Draft**
+4. Fill in the **To** and **Subject** fields (auto-populated when loading from inbox)
+5. Click **Send via Outlook** to send immediately, or **Save to Outlook Drafts** to review in Outlook first
 
 ---
 
@@ -108,23 +140,24 @@ Following a call or meeting, the agent writes a timely thank-you that acknowledg
 
 ```
 EmailDraftAgent/
-├── server.js          # Express server + Anthropic API integration + prompts
+├── server.js          # Express server, MSAL auth, Graph API, Anthropic integration
 ├── package.json       # Dependencies and scripts
-├── .env               # API key (never commit this)
+├── .env               # API keys and secrets (never commit this)
 ├── .env.example       # Template for new environments
 ├── .gitignore
 └── public/
     ├── index.html     # App layout and markup
     ├── style.css      # Styling (gold/charcoal/white theme)
-    └── app.js         # Frontend logic (fetch, state, clipboard)
+    ├── app.js         # Frontend logic (auth, inbox, draft, send)
+    └── Logo.PNG       # Iconic Founders Group logo
 ```
 
 ---
 
 ## What I'd Build Next
 
-1. **Microsoft Graph API integration** — connect directly to Outlook so emails load automatically and drafts are pushed back as reply drafts without copy-pasting
-2. **HubSpot CRM sync** — auto-log drafted emails against the RA's contact record and tag engagement activity
-3. **Conversation memory** — store prior email threads per contact so the agent has context before writing follow-ups (e.g., "you last spoke 3 weeks ago about a plumbing business in Phoenix")
-4. **Template library** — let advisors save and rate their best drafts to continuously improve the prompts
-5. **Multi-sender support** — support multiple advisor profiles beyond John Smith, each with their own voice and relationship history
+1. **HubSpot CRM sync** — auto-log drafted emails against the RA's contact record and tag engagement activity, so every outreach is tracked without manual data entry
+2. **Conversation memory** — store prior email threads per contact so the agent has full context before writing follow-ups (e.g., "you last spoke 3 weeks ago about a plumbing business in Phoenix")
+3. **Reply threading** — detect when an email is a reply and automatically load the full thread as context, so the draft acknowledges the full conversation history
+4. **Template library** — let advisors save and rate their best drafts to continuously refine the prompts over time
+5. **Multi-advisor support** — support multiple sender profiles beyond John Smith, each with their own voice, signature, and relationship history with specific RAs

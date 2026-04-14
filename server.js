@@ -160,40 +160,6 @@ app.get("/api/me", (req, res) => {
   res.json({ authenticated: true, user: req.session.user });
 });
 
-// ─── Token debug (remove after troubleshooting) ───────
-app.get("/api/debug-token", (req, res) => {
-  if (!req.session.accessToken) return res.json({ error: "No token in session" });
-  try {
-    const parts = req.session.accessToken.split(".");
-    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
-    res.json({
-      aud: payload.aud,
-      scp: payload.scp,
-      roles: payload.roles,
-      upn: payload.upn || payload.preferred_username,
-      exp: new Date(payload.exp * 1000).toISOString(),
-    });
-  } catch {
-    res.json({ error: "Could not decode token", token_prefix: req.session.accessToken.slice(0, 30) });
-  }
-});
-
-// ─── Folder check (debug) ─────────────────────────────
-app.get("/api/check-folders", requireAuth, async (req, res) => {
-  try {
-    const [drafts, sent] = await Promise.all([
-      graphGet(req.session.accessToken, "/me/mailFolders/drafts/messages?$top=3&$select=id,subject,createdDateTime&$orderby=createdDateTime desc"),
-      graphGet(req.session.accessToken, "/me/mailFolders/sentitems/messages?$top=3&$select=id,subject,sentDateTime&$orderby=sentDateTime desc"),
-    ]);
-    res.json({
-      drafts: drafts.value.map(m => ({ id: m.id, subject: m.subject, created: m.createdDateTime })),
-      sent:   sent.value.map(m => ({ id: m.id, subject: m.subject, sent: m.sentDateTime })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ─── Inbox ────────────────────────────────────────────
 app.get("/api/emails", requireAuth, async (req, res) => {
   try {
