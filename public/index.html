@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Draft Agent — Iconic Founders Group</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo-block">
+        <img src="logo.png" alt="Iconic Founders Group" class="header-logo" />
+        <div>
+          <div class="firm-name">ICONIC FOUNDERS GROUP</div>
+          <div class="firm-tagline">AI Email Drafting Agent</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel-grid">
+
+      <!-- LEFT PANEL: Input -->
+      <section class="panel panel-left">
+        <h2 class="panel-title">Compose</h2>
+
+        <!-- Email Type -->
+        <div class="field-group">
+          <label class="field-label">Email Type</label>
+          <div class="type-cards">
+            <label class="type-card" data-type="inbound_ra">
+              <input type="radio" name="emailType" value="inbound_ra" checked />
+              <div class="type-card-inner">
+                <span class="type-number">01</span>
+                <span class="type-name">Inbound RA</span>
+                <span class="type-desc">Vague connection request — qualify intent</span>
+              </div>
+            </label>
+            <label class="type-card" data-type="outbound_followup">
+              <input type="radio" name="emailType" value="outbound_followup" />
+              <div class="type-card-inner">
+                <span class="type-number">02</span>
+                <span class="type-name">Outbound Follow-Up</span>
+                <span class="type-desc">Re-engage an RA who never replied</span>
+              </div>
+            </label>
+            <label class="type-card" data-type="post_meeting">
+              <input type="radio" name="emailType" value="post_meeting" />
+              <div class="type-card-inner">
+                <span class="type-number">03</span>
+                <span class="type-name">Post-Meeting</span>
+                <span class="type-desc">Thank-you after a call or meeting</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tone -->
+        <div class="field-group">
+          <label class="field-label">Tone</label>
+          <div class="tone-toggle">
+            <label class="tone-option">
+              <input type="radio" name="tone" value="warm" checked />
+              <span>Warm</span>
+            </label>
+            <label class="tone-option">
+              <input type="radio" name="tone" value="formal" />
+              <span>Formal</span>
+            </label>
+            <label class="tone-option">
+              <input type="radio" name="tone" value="concise" />
+              <span>Concise</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Email Input -->
+        <div class="field-group field-grow">
+          <label class="field-label" for="emailInput">
+            Paste the incoming email or describe the context
+          </label>
+          <textarea
+            id="emailInput"
+            class="email-textarea"
+            placeholder="e.g. &quot;Hi John, I'd love to connect sometime. Let me know when you're free.&quot;
+
+Or for a follow-up: describe who you contacted and when.
+For post-meeting: paste the email thread or summarize what was discussed."
+          ></textarea>
+        </div>
+
+        <button id="generateBtn" class="generate-btn">
+          <span id="btnText">Generate Draft</span>
+          <span id="btnSpinner" class="spinner hidden"></span>
+        </button>
+      </section>
+
+      <!-- RIGHT PANEL: Output -->
+      <section class="panel panel-right">
+        <div class="draft-header">
+          <h2 class="panel-title">Draft</h2>
+          <div class="draft-actions">
+            <button id="copyBtn" class="action-btn hidden" title="Copy to clipboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
+            <button id="clearBtn" class="action-btn hidden" title="Clear draft">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">&#9998;</div>
+          <p>Your AI-generated draft will appear here.<br/>Paste an email on the left and click <strong>Generate Draft</strong>.</p>
+        </div>
+
+        <div id="errorState" class="error-state hidden">
+          <span id="errorMessage"></span>
+        </div>
+
+        <textarea
+          id="draftOutput"
+          class="draft-textarea hidden"
+          placeholder="Your draft will appear here..."
+          spellcheck="true"
+        ></textarea>
+
+        <div id="draftMeta" class="draft-meta hidden">
+          <span id="wordCount"></span>
+          <span class="meta-sep">·</span>
+          <span id="draftTypeLabel"></span>
+          <span class="meta-sep">·</span>
+          <span id="draftToneLabel"></span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

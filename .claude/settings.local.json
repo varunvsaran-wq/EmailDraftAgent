@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node -e ':*)",
+      "Bash(node server.js)",
+      "Bash(curl -s -X POST http://localhost:3000/api/draft -H 'Content-Type: application/json' -d '{\"emailContent\":\"Hi John, I would love to connect sometime soon. Let me know when you are free.\",\"emailType\":\"inbound_ra\",\"tone\":\"warm\"}')",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /PID 68264 /F)",
+      "Bash(cmd /c \"taskkill /PID 68264 /F\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3000\")"
+    ]
+  }
+}
