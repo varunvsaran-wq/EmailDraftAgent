@@ -41,7 +41,7 @@ An AI-powered web tool that reads email context and generates professional, read
 ### 1. Clone or download the project
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/varunvsaran-wq/EmailDraftAgent.git
 cd EmailDraftAgent
 ```
 
