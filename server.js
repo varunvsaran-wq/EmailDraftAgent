@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
-const RedisStore = require("connect-redis").default;
+const { RedisStore } = require("connect-redis");
 const Redis = require("ioredis");
 const Anthropic = require("@anthropic-ai/sdk");
 const msal = require("@azure/msal-node");
