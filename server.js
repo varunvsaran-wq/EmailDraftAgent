@@ -2,8 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
-const { RedisStore } = require("connect-redis");
-const Redis = require("ioredis");
+const { Redis } = require("@upstash/redis");
 const Anthropic = require("@anthropic-ai/sdk");
 const msal = require("@azure/msal-node");
 const path = require("path");
@@ -12,10 +11,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+// Custom session store using Upstash REST API (works reliably in serverless)
+class UpstashStore extends session.Store {
+  constructor() {
+    super();
+    this.client = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+  async get(sid, cb) {
+    try { cb(null, await this.client.get(`sess:${sid}`)); }
+    catch (e) { cb(e); }
+  }
+  async set(sid, sess, cb) {
+    try {
+      const ttl = sess.cookie?.maxAge ? Math.floor(sess.cookie.maxAge / 1000) : 28800;
+      await this.client.setex(`sess:${sid}`, ttl, sess);
+      cb(null);
+    } catch (e) { cb(e); }
+  }
+  async destroy(sid, cb) {
+    try { await this.client.del(`sess:${sid}`); cb(null); }
+    catch (e) { cb(e); }
+  }
+}
 
 app.use(session({
-  store: new RedisStore({ client: redis }),
+  store: new UpstashStore(),
   secret: process.env.SESSION_SECRET || "ifg-email-agent-secret",
   resave: false,
   saveUninitialized: false,
