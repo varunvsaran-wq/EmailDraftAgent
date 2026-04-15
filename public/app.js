@@ -273,7 +273,7 @@
       if (!res.ok) showError(data.error || "Something went wrong. Please try again.");
       else showDraft(data.draft, emailType, tone);
     } catch {
-      showError("Could not reach the server. Make sure it is running on port 3001.");
+      showError("Could not reach the server. Please try again.");
     } finally {
       setLoading(false);
     }

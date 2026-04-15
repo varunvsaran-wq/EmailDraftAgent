@@ -291,13 +291,18 @@ Write the reply email now. Output only the email body — no subject line, no me
   }
 });
 
-const PORT = process.env.PORT || 4000;
-const server = app.listen(PORT, () => console.log(`Email Draft Agent running at http://localhost:${PORT}`));
-server.on("error", err => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`\nPort ${PORT} is already in use. Kill the existing process and try again.\nRun: netstat -ano | findstr :${PORT}\n`);
-  } else {
-    console.error(err);
-  }
-  process.exit(1);
-});
+// Only start the HTTP server when running locally — Vercel handles this in production
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 4000;
+  const server = app.listen(PORT, () => console.log(`Email Draft Agent running at http://localhost:${PORT}`));
+  server.on("error", err => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\nPort ${PORT} is already in use.\nRun: netstat -ano | findstr :${PORT}\n`);
+    } else {
+      console.error(err);
+    }
+    process.exit(1);
+  });
+}
+
+module.exports = app;
