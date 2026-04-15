@@ -1,7 +1,9 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const cookieSession = require("cookie-session");
+const session = require("express-session");
+const RedisStore = require("connect-redis").default;
+const Redis = require("ioredis");
 const Anthropic = require("@anthropic-ai/sdk");
 const msal = require("@azure/msal-node");
 const path = require("path");
@@ -9,13 +11,20 @@ const path = require("path");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(cookieSession({
-  name: "session",
+
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+
+app.use(session({
+  store: new RedisStore({ client: redis }),
   secret: process.env.SESSION_SECRET || "ifg-email-agent-secret",
-  maxAge: 8 * 60 * 60 * 1000,
-  secure: process.env.NODE_ENV === "production",
-  httpOnly: true,
-  sameSite: "lax",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 8 * 60 * 60 * 1000,
+  },
 }));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -118,8 +127,7 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 app.get("/auth/logout", (req, res) => {
-  req.session = null;
-  res.redirect("/");
+  req.session.destroy(() => res.redirect("/"));
 });
 
 // ─── Middleware ───────────────────────────────────────
