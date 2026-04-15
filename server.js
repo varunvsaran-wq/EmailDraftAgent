@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const session = require("express-session");
+const cookieSession = require("cookie-session");
 const Anthropic = require("@anthropic-ai/sdk");
 const msal = require("@azure/msal-node");
 const path = require("path");
@@ -9,11 +9,13 @@ const path = require("path");
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(session({
+app.use(cookieSession({
+  name: "session",
   secret: process.env.SESSION_SECRET || "ifg-email-agent-secret",
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 8 * 60 * 60 * 1000 },
+  maxAge: 8 * 60 * 60 * 1000,
+  secure: process.env.NODE_ENV === "production",
+  httpOnly: true,
+  sameSite: "lax",
 }));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -68,7 +70,7 @@ const TONE_INSTRUCTIONS = {
 };
 
 // ─── MSAL / Outlook Auth ──────────────────────────────
-const REDIRECT_URI = `http://localhost:${process.env.PORT || 4000}/auth/callback`;
+const REDIRECT_URI = process.env.REDIRECT_URI || `http://localhost:${process.env.PORT || 4000}/auth/callback`;
 const GRAPH_SCOPES = [
   "https://graph.microsoft.com/Mail.Read",
   "https://graph.microsoft.com/Mail.Send",
@@ -116,7 +118,8 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 app.get("/auth/logout", (req, res) => {
-  req.session.destroy(() => res.redirect("/"));
+  req.session = null;
+  res.redirect("/");
 });
 
 // ─── Middleware ───────────────────────────────────────
